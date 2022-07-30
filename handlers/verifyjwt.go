@@ -13,12 +13,16 @@ var mySigningKey = []byte(DotEnvVariable("JWT_SECRET"))
 // IsAuthorized -> verify jwt header
 func IsAuthorized(next http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Header["Token"] != nil {
+		tokens := r.Header["Token"]
+		tokenVal := ""
+		if tokens != nil && len(tokens) > 0 {
+			tokenVal = tokens[0]
+		}
+		if len(tokenVal) > 0 {
 
 			token, err := jwt.Parse(r.Header["Token"][0], func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("There was an error")
+					return nil, fmt.Errorf("There was an error.SigningMethodHMAC")
 				}
 				return mySigningKey, nil
 			})

@@ -3,22 +3,24 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"strings"
-
+	"github.com/go-chi/chi/v5"
+	"github.com/goava/di"
 	"github.com/gorilla/mux"
 	"github.com/umangraval/Go-Mongodb-REST-boilerplate/db"
+	"github.com/umangraval/Go-Mongodb-REST-boilerplate/deps"
 	middlewares "github.com/umangraval/Go-Mongodb-REST-boilerplate/handlers"
 	"github.com/umangraval/Go-Mongodb-REST-boilerplate/models"
 	"github.com/umangraval/Go-Mongodb-REST-boilerplate/validators"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"io"
+	"log"
+	"net/http"
+	"os"
 )
 
-var client = db.Dbconnect()
+var database, _ = db.ConnectToDatabase()
 
 // Auths -> get token
 var Auths = http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
@@ -42,41 +44,50 @@ var CreatePersonEndpoint = http.HandlerFunc(func(response http.ResponseWriter, r
 		middlewares.ValidationResponse(errors, response)
 		return
 	}
-	collection := client.Database("golang").Collection("people")
+	var collection *mongo.Collection
+	deps.MainContainer.Resolve(&collection, di.Tags{"collection": "people"})
+
 	result, err := collection.InsertOne(context.TODO(), person)
+
 	if err != nil {
 		middlewares.ServerErrResponse(err.Error(), response)
 		return
 	}
-	res, _ := json.Marshal(result.InsertedID)
-	middlewares.SuccessResponse(`Inserted at `+strings.Replace(string(res), `"`, ``, 2), response)
+
+	id := models.SecureID("People", result.InsertedID.(primitive.ObjectID))
+	middlewares.SuccessResponse(`Inserted at `+id, response)
 })
 
 // GetPeopleEndpoint -> get people
-var GetPeopleEndpoint = http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-	var people []*models.Person
+func GetPeopleEndpoint(response http.ResponseWriter, request *http.Request) {
+	people := make([]models.Person, 0)
 
-	collection := client.Database("golang").Collection("people")
-	cursor, err := collection.Find(context.TODO(), bson.D{{}})
+	var collection *mongo.Collection
+	deps.MainContainer.Resolve(&collection, di.Tags{"collection": "people"})
+
+	cursor, err := collection.Find(request.Context(), bson.D{{}})
 	if err != nil {
 		middlewares.ServerErrResponse(err.Error(), response)
 		return
 	}
-	for cursor.Next(context.TODO()) {
+	for cursor.Next(request.Context()) {
 		var person models.Person
 		err := cursor.Decode(&person)
 		if err != nil {
 			log.Fatal(err)
 		}
+		person.ID = models.SecureID("People", person.ObjectID)
+		people = append(people, person)
 
-		people = append(people, &person)
 	}
 	if err := cursor.Err(); err != nil {
 		middlewares.ServerErrResponse(err.Error(), response)
 		return
 	}
-	middlewares.SuccessArrRespond(people, response)
-})
+	response.Header().Set("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	json.NewEncoder(response).Encode(people)
+}
 
 // GetPersonEndpoint -> get person by id
 var GetPersonEndpoint = http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
@@ -84,7 +95,9 @@ var GetPersonEndpoint = http.HandlerFunc(func(response http.ResponseWriter, requ
 	id, _ := primitive.ObjectIDFromHex(params["id"])
 	var person models.Person
 
-	collection := client.Database("golang").Collection("people")
+	var collection *mongo.Collection
+	deps.MainContainer.Resolve(&collection, di.Tags{"collection": "people"})
+
 	err := collection.FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: id}}).Decode(&person)
 	if err != nil {
 		middlewares.ErrorResponse("Person does not exist", response)
@@ -99,7 +112,7 @@ var DeletePersonEndpoint = http.HandlerFunc(func(response http.ResponseWriter, r
 	id, _ := primitive.ObjectIDFromHex(params["id"])
 	var person models.Person
 
-	collection := client.Database("golang").Collection("people")
+	collection := database.Collection("people")
 	err := collection.FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: id}}).Decode(&person)
 	if err != nil {
 		middlewares.ErrorResponse("Person does not exist", response)
@@ -122,7 +135,7 @@ var UpdatePersonEndpoint = http.HandlerFunc(func(response http.ResponseWriter, r
 	}
 	var fir fname
 	json.NewDecoder(request.Body).Decode(&fir)
-	collection := client.Database("golang").Collection("people")
+	collection := database.Collection("people")
 	res, err := collection.UpdateOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: id}}, bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "firstname", Value: fir.Firstname}}}})
 	if err != nil {
 		middlewares.ServerErrResponse(err.Error(), response)
@@ -153,3 +166,24 @@ var UploadFileEndpoint = http.HandlerFunc(func(response http.ResponseWriter, req
 
 	middlewares.SuccessResponse("Uploaded Successfully", response)
 })
+
+type PeopleApiController struct {
+}
+
+var _ ApiControler = &PeopleApiController{}
+
+func (PeopleApiController) SetupRouter(r chi.Router) {
+	r.Get("/", GetPeopleEndpoint)
+	r.Post("/", CreatePersonEndpoint)
+	r.Get("/{id}", GetPersonEndpoint)
+	r.Delete("/{id}", DeletePersonEndpoint)
+	r.Put("/{id}", UpdatePersonEndpoint)
+}
+
+func (PeopleApiController) GetPrefix() string {
+	return "/people"
+}
+
+func (PeopleApiController) SetupOpenAPI() {
+
+}

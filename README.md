@@ -8,11 +8,11 @@ This repo can be used as a starting point for backend development with Golang. I
 
 A few things to note in the project:
 * **[Github Actions Workflows](https://github.com/umangraval/Go-Mongodb-REST-boilerplate/tree/main/.github/workflows)** - Pre-configured Github Actions to run automated builds and publish image to Github Packages
+* **[Go Chi](https://go.mongodb.org/mongo-driver)** - HTTP request multiplexer.
 * **[Dockerfile](https://github.com/umangraval/Go-Mongodb-REST-boilerplate/blob/main/Dockerfile)** - Dockerfile to generate docker builds.
 * **[docker-compose](https://github.com/umangraval/Go-Mongodb-REST-boilerplate/blob/main/docker-compose.yml)** - Docker compose script to start service in production mode.
 * **[Containerized Mongo for development](#development)** - Starts a local mongo container with data persistence across runs.
 * **[Mongo Driver](https://go.mongodb.org/mongo-driver)** - MongoDB supported driver for Go.
-* **[Gorilla Mux](https://go.mongodb.org/mongo-driver)** - HTTP request multiplexer.
 * **[jwt-go](https://github.com/dgrijalva/jwt-go)** - Implementation of JWT Tokens.
 * **[Validator](https://gopkg.in/go-playground/validator.v9)** - Package validator implements value validations for structs.
 <!-- * **[OpenAPI 3.0 Spec](https://github.com/sidhantpanda/docker-express-typescript-boilerplate/blob/master/openapi.json)** - A starter template to get started with API documentation using OpenAPI 3.0. This API spec is also available when running the development server at `http://localhost:3000/dev/api-docs` -->
@@ -43,7 +43,7 @@ Starting the dev server also starts MongoDB as a service in a docker container u
 ```
 $ go run main.go routes.go
 ```
-Running the above commands results in 
+Running the above commands results in
 * 🌏 **API Server** running at `http://localhost:8080`
 <!-- * ⚙️**Swagger UI** at `http://localhost:3000/dev/api-docs` -->
 * ⛁ **MongoDB** running at `mongodb://localhost:27017/db`
@@ -52,7 +52,7 @@ Running the above commands results in
 #### 1. Build and run without Docker
 
 ```
-$ go build 
+$ go build
 ```
 #### 2. Run Tests
 

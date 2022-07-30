@@ -4,7 +4,8 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 
 // Person Model
 type Person struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	ObjectID  primitive.ObjectID `json:"-" bson:"_id,omitempty"`
+	ID        string             `json:"id" bson:"-"`
 	Firstname string             `json:"firstname,omitempty" bson:"firstname,omitempty" validate:"required,alpha"`
 	Lastname  string             `json:"lastname,omitempty" bson:"lastname,omitempty" validate:"required,alpha"`
 }

@@ -22,23 +22,12 @@ func AuthorizationResponse(msg string, writer http.ResponseWriter) {
 }
 
 // SuccessArrRespond -> response formatter
-func SuccessArrRespond(fields []*models.Person, writer http.ResponseWriter) {
-	// var fields["status"] := "success"
-	_, err := json.Marshal(fields)
-	type data struct {
-		People     []*models.Person `json:"data"`
-		Statuscode int              `json:"status"`
-		Message    string           `json:"msg"`
-	}
-	temp := &data{People: fields, Statuscode: 200, Message: "success"}
-	if err != nil {
-		ServerErrResponse(err.Error(), writer)
-	}
+func SuccessArrRespond(dat []*models.Person, writer http.ResponseWriter) {
 
 	//Send header, status code and output to writer
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(temp)
+	json.NewEncoder(writer).Encode(dat)
 }
 
 // SuccessRespond -> response formatter

@@ -11,10 +11,10 @@ import (
 func DotEnvVariable(key string) string {
 
 	// load .env file
-	err := godotenv.Load("../.env")
+	err := godotenv.Load("./.env")
 
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		log.Fatalf("Error loading .env file %s", err)
 	}
 
 	return os.Getenv(key)

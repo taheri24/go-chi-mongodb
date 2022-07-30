@@ -1,23 +1,34 @@
 package routes
 
 import (
-	"net/http"
-
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/umangraval/Go-Mongodb-REST-boilerplate/controllers"
-	middlewares "github.com/umangraval/Go-Mongodb-REST-boilerplate/handlers"
 )
 
 // Routes -> define endpoints
-func Routes() *mux.Router {
-	router := mux.NewRouter()
-	router.HandleFunc("/person", controllers.CreatePersonEndpoint).Methods("POST")
-	router.HandleFunc("/auth", controllers.Auths).Methods("GET")
-	router.HandleFunc("/people", middlewares.IsAuthorized(controllers.GetPeopleEndpoint)).Methods("GET")
-	router.HandleFunc("/person/{id}", controllers.GetPersonEndpoint).Methods("GET")
-	router.HandleFunc("/person/{id}", controllers.DeletePersonEndpoint).Methods("DELETE")
-	router.HandleFunc("/person/{id}", controllers.UpdatePersonEndpoint).Methods("PUT")
-	router.HandleFunc("/upload", controllers.UploadFileEndpoint).Methods("POST")
-	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./uploaded/"))))
-	return router
+func Routes(apiControlers []controllers.ApiControler) *chi.Mux {
+
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "PUT", "POST", "DELETE", "HEAD", "OPTION"},
+		AllowedHeaders:   []string{"User-Agent", "Content-Type", "Accept", "Accept-Encoding", "Accept-Language", "Cache-Control", "Connection", "DNT", "Host", "Origin", "Pragma", "Referer"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           3600, // Maximum value not ignored by any of major browsers
+	}))
+
+	r.Mount("/debug", middleware.Profiler())
+	r.Get("/auth", controllers.Auths)
+	r.Route("/api", func(r chi.Router) {
+		for _, apiCtrl := range apiControlers {
+			r.Route(apiCtrl.GetPrefix(), apiCtrl.SetupRouter)
+		}
+	})
+	r.Post("/upload", controllers.UploadFileEndpoint)
+	return r
 }
